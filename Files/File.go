@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-02 16:48:31
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-02 18:13:05
+* @Last Modified time: 2018-10-05 17:45:18
  */
 
 package Files
@@ -39,7 +39,7 @@ func (file *File) Index_fs() {
 	path, err := os.Open(file.Path)
 
 	if err != nil {
-		fmt.Printf("Error Accessing path: %b\nErr: %b", file.Path, err)
+		fmt.Printf("Error Accessing path: %v\nErr: %v", file.Path, err)
 		return
 	}
 
@@ -47,7 +47,7 @@ func (file *File) Index_fs() {
 	files, err := path.Readdir(-1)
 
 	if err != nil {
-		fmt.Printf("Error Reading Directory: %b\nErr: %b", file.Path, err)
+		fmt.Printf("Error Reading Directory: %v\nErr: %v", file.Path, err)
 		return
 	}
 
