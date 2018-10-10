@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 02:38:49
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-10 03:55:29
+* @Last Modified time: 2018-10-10 06:09:09
  */
 package File_Manager
 
@@ -21,7 +21,6 @@ import (
 
 type File_Manager struct {
 	Root_Folder_Path      string
-	Current_Selected_File *Files.File
 	Structure             map[string]*Files.File
 	Watcher               *fsnotify.Watcher
 }
