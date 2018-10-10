@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-02 16:48:31
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-10 00:56:18
+* @Last Modified time: 2018-10-10 01:20:02
  */
 
 package Files
@@ -32,6 +32,16 @@ func New_File(path string, filetype string) *File {
 	file.IsDir = true
 	file.Contents = make(map[string]*File)
 	return file
+}
+
+func (file *File) Update_Info() {
+	stats, err := os.Stat(file.Path)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	file.populate_file_info(stats)
 }
 
 func (file *File) Index_fs() {

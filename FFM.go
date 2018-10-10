@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-01 18:58:24
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-10 01:10:10
+* @Last Modified time: 2018-10-10 01:21:31
  */
 package main
 
@@ -90,6 +90,14 @@ func (fm *File_Manager) Handle_Event(event fsnotify.Event) {
 		if err != nil {
 			fmt.Println(err)
 		}
+
+	case fsnotify.Write:
+		fmt.Println("Write Event")
+		file, err := fm.Get_File_By_Path(event.Name)
+		if err != nil {
+			fmt.Println(err)
+		}
+		file.Update_Info()
 	}
 }
 
