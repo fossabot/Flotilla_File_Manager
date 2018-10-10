@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-02 16:48:31
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-05 17:45:18
+* @Last Modified time: 2018-10-10 00:56:18
  */
 
 package Files
@@ -45,6 +45,7 @@ func (file *File) Index_fs() {
 
 	// read dir
 	files, err := path.Readdir(-1)
+	path.Close()
 
 	if err != nil {
 		fmt.Printf("Error Reading Directory: %v\nErr: %v", file.Path, err)
