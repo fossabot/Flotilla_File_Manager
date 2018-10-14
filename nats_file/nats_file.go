@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 06:10:39
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-10 06:40:22
+* @Last Modified time: 2018-10-14 11:21:36
 */
 
 package nats_file
@@ -27,8 +27,12 @@ func New_Nats_File() (*Nats_File, error){
 	fnats.NC, err = nats.Connect(nats.DefaultURL)
 
 	if err != nil {
-		log.Fatalf("Can't connect: %v\n", err)
+		msg := fmt.Sprintf("Can't connect: %v\n", err)
+		panic(msg)
 	}
+
+	// Create File manager
+	fnats.File_Manager = FM.New_File_Manager()
 
 	return fnats, nil
 }
@@ -42,6 +46,6 @@ func (nf *Nats_File) select_file(msg *nats.Msg){
 
 }
 
-func (nf *Nats_File) get_file_json(msg *nats.Mgs){
+func (nf *Nats_File) get_file_json(msg *nats.Msg){
 
 }
