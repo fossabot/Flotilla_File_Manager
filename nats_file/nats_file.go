@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 06:10:39
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-10 06:34:35
+* @Last Modified time: 2018-10-10 06:40:22
 */
 
 package nats_file
@@ -10,35 +10,14 @@ package nats_file
 import(
 	"fmt"
 	"github.com/nats-io/go-nats"
-)
-
-const(
-	NAME = "FILE_MANAGER."
-
-	// File Structure controls
-	SELECT_FILE = NAME + "SELECT_FILE"
-	GET_FILE_STRUCTURE = NAME + "GET_FILE_STRUCTURE"
-	ADD_FILE = NAME + "ADD_FILE"
-	MOVE_FILE = NAME + "MOVE_FILE"
-	DELETE_FILE = NAME + "DELETE_FILE"
-
-	// Print Controls
-	IS_PRINTING = NAME + "IS_PRINTING"
-	IS_PAUSED = NAME + "IS_PAUSED"
-	TOGGLE_PAUSE = NAME + "TOGGLE_PAUSE"
-	START_PRINT = NAME + "START_PRINT"
-	CANCEL_PRINT = NAME + "CANCEL_PRINT"
-
-
-	// Publishers
-	UPDATE_FS = NAME + "UPDATE_FS"
-	FILE_PROGRESS = NAME + "FILE_PROGRESS"
-	
-
+	FS "github.com/ximidar/Flotilla/data_structures/file_structures"
+	FM "github.com/ximidar/Flotilla/Flotilla_File_Manager/File_Manager"
 )
 
 type Nats_File struct{
 	NC *nats.Conn
+
+	File_Manager *FM.File_Manager
 
 }
 
@@ -55,8 +34,8 @@ func New_Nats_File() (*Nats_File, error){
 }
 
 func (nf *Nats_File) Create_Reqs() {
-	nf.NC.Subscribe(SELECT_FILE, nf.select_file)
-	nf.NC.Subscribe(GET_FILE_STRUCTURE, nf.get_file_json)
+	nf.NC.Subscribe(FS.SELECT_FILE, nf.select_file)
+	nf.NC.Subscribe(FS.GET_FILE_STRUCTURE, nf.get_file_json)
 }
 
 func (nf *Nats_File) select_file(msg *nats.Msg){
