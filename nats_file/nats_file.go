@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 06:10:39
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-14 11:21:36
+* @Last Modified time: 2018-10-14 11:25:04
 */
 
 package nats_file
@@ -27,8 +27,8 @@ func New_Nats_File() (*Nats_File, error){
 	fnats.NC, err = nats.Connect(nats.DefaultURL)
 
 	if err != nil {
-		msg := fmt.Sprintf("Can't connect: %v\n", err)
-		panic(msg)
+		fmt.Printf("Can't connect: %v\n", err)
+		return nil, err
 	}
 
 	// Create File manager
