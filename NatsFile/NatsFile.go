@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 06:10:39
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-17 11:43:17
+* @Last Modified time: 2018-10-17 14:17:32
  */
 
 package NatsFile
@@ -11,8 +11,8 @@ import (
 	"fmt"
 
 	"github.com/nats-io/go-nats"
+	FS "github.com/ximidar/Flotilla/DataStructures/FileStructures"
 	FM "github.com/ximidar/Flotilla/Flotilla_File_Manager/FileManager"
-	FS "github.com/ximidar/Flotilla/data_structures/file_structures"
 )
 
 // NatsFile is a Struct for the Nats interface to
@@ -46,8 +46,8 @@ func NewNatsFile() (fnats *NatsFile, err error) {
 func (nf *NatsFile) createReqs() (err error) {
 	// Assign each to err. At the end if there are errors we will
 	// return the most recent error
-	_, err = nf.NC.Subscribe(FS.SELECT_FILE, nf.selectFile)
-	_, err = nf.NC.Subscribe(FS.GET_FILE_STRUCTURE, nf.getFileJSON)
+	_, err = nf.NC.Subscribe(FS.SelectFile, nf.selectFile)
+	_, err = nf.NC.Subscribe(FS.GetFileStructure, nf.getFileJSON)
 
 	if err != nil {
 		return err
