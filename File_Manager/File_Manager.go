@@ -2,31 +2,36 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 02:38:49
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-10 06:09:09
+* @Last Modified time: 2018-10-17 11:22:04
  */
-package File_Manager
+
+package FileManager
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/fsnotify/fsnotify"
-	"github.com/ximidar/Flotilla/Flotilla_File_Manager/Files"
+	"io"
 	"os"
 	ospath "path"
 	"path/filepath"
 	"strings"
-	"io"
+
+	"github.com/fsnotify/fsnotify"
+	"github.com/ximidar/Flotilla/Flotilla_File_Manager/Files"
 )
 
-type File_Manager struct {
-	Root_Folder_Path      string
-	Structure             map[string]*Files.File
-	Watcher               *fsnotify.Watcher
+// FileManager is an object for keeping track of a folder and
+// it's contents.
+type FileManager struct {
+	RootFolderPath string
+	Structure      map[string]*Files.File
+	Watcher        *fsnotify.Watcher
 }
 
-func New_File_Manager() *File_Manager {
-	fm := new(File_Manager)
+// NewFileManager will contstruct a FileManager Object
+func NewFileManager() *FileManager {
+	fm := new(FileManager)
 	fm.Structure = make(map[string]*Files.File)
 
 	// Create notify watcher
@@ -42,12 +47,13 @@ func New_File_Manager() *File_Manager {
 	return fm
 }
 
-func (fm *File_Manager) FS_Watcher() {
+// FSWatcher will watch for events and handle them as they come in
+func (fm *FileManager) FSWatcher() {
 	for {
 		select {
 		// watch for events
 		case event := <-fm.Watcher.Events:
-			fm.Handle_Event(event)
+			fm.HandleEvent(event)
 		// watch for errors
 		case err := <-fm.Watcher.Errors:
 			fmt.Println("ERROR", err)
@@ -56,7 +62,8 @@ func (fm *File_Manager) FS_Watcher() {
 	}
 }
 
-func (fm *File_Manager) Handle_Event(event fsnotify.Event) {
+// HandleEvent will handle a File system Event
+func (fm *FileManager) HandleEvent(event fsnotify.Event) {
 	fmt.Printf("Event at %s\n", event.Name)
 
 	op := event.Op
@@ -71,13 +78,13 @@ func (fm *File_Manager) Handle_Event(event fsnotify.Event) {
 		}
 	case fsnotify.Remove:
 		fmt.Println("Remove Event")
-		err := fm.Remove_File_From_Structure(event.Name)
+		err := fm.RemoveFileFromStructure(event.Name)
 		if err != nil {
 			fmt.Println(err)
 		}
 	case fsnotify.Rename:
 		fmt.Println("Rename Event")
-		err := fm.Remove_File_From_Structure(event.Name)
+		err := fm.RemoveFileFromStructure(event.Name)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -92,7 +99,8 @@ func (fm *File_Manager) Handle_Event(event fsnotify.Event) {
 	}
 }
 
-func (fm *File_Manager) Remove_File_From_Structure(path string) error {
+// RemoveFileFromStructure Will remove a file object from the Structure Map
+func (fm *FileManager) RemoveFileFromStructure(path string) error {
 	file, err := fm.Get_File_By_Path(ospath.Dir(path))
 	basename := ospath.Base(path)
 	if err != nil {
@@ -109,7 +117,7 @@ func (fm *File_Manager) Remove_File_From_Structure(path string) error {
 	return nil
 }
 
-func (fm *File_Manager) Add_File_To_Structure(path string) error {
+func (fm *FileManager) Add_File_To_Structure(path string) error {
 	file, err := fm.Get_File_By_Path(path)
 	if err == nil {
 		return errors.New("File already exists")
@@ -140,7 +148,7 @@ func (fm *File_Manager) Add_File_To_Structure(path string) error {
 }
 
 // This function will be given a path and it will return the correct file
-func (fm File_Manager) Get_File_By_Path(path string) (*Files.File, error) {
+func (fm FileManager) Get_File_By_Path(path string) (*Files.File, error) {
 	// if the path is the root file, then get the root file
 	if path == fm.Root_Folder_Path {
 		return fm.Structure["root"], nil
@@ -180,7 +188,7 @@ func (fm File_Manager) Get_File_By_Path(path string) (*Files.File, error) {
 
 // This function will check that our Root Folder Path Exists and is created, then it will add fsnotify
 // watchers to every path
-func (fm *File_Manager) Init_Paths() {
+func (fm *FileManager) Init_Paths() {
 
 	// Create root folder path
 	fm.create_root_folder_path()
@@ -188,13 +196,13 @@ func (fm *File_Manager) Init_Paths() {
 	// Index FS
 	fm.index_fs()
 
-	go fm.FS_Watcher()
+	go fm.FSWatcher()
 
 }
 
 // walk the root directory and index filesystem while also adding directories to the
 // fs watcher
-func (fm *File_Manager) index_fs() {
+func (fm *FileManager) index_fs() {
 	filepath.Walk(fm.Root_Folder_Path, func(path string, info os.FileInfo, err error) error {
 
 		if err != nil {
@@ -215,7 +223,7 @@ func (fm *File_Manager) index_fs() {
 	fm.Print_Structure()
 }
 
-func (fm File_Manager) Print_Structure() {
+func (fm FileManager) Print_Structure() {
 	marshed, err := fm.Get_JSON_Structure()
 	if err != nil {
 		fmt.Println("Couldn't get json structure:", err)
@@ -224,7 +232,7 @@ func (fm File_Manager) Print_Structure() {
 	fmt.Println(string(marshed))
 }
 
-func (fm File_Manager) Get_JSON_Structure() ([]byte, error) {
+func (fm FileManager) Get_JSON_Structure() ([]byte, error) {
 	marshed, err := json.MarshalIndent(fm.Structure, "", "    ")
 	if err != nil {
 		fmt.Println(err)
@@ -233,7 +241,7 @@ func (fm File_Manager) Get_JSON_Structure() ([]byte, error) {
 	return marshed, nil
 }
 
-func (fm *File_Manager) create_root_folder_path() {
+func (fm *FileManager) create_root_folder_path() {
 	// Check and create basic data directory
 	home := os.Getenv("HOME")
 	fm.Root_Folder_Path = ospath.Clean(home + "/Flotilla_Data")
@@ -252,121 +260,119 @@ func (fm *File_Manager) create_root_folder_path() {
 // fsnotify functions will take care of maintaining the correct structure  //
 /////////////////////////////////////////////////////////////////////////////
 
-func (fm File_Manager) Add_File(src, dst string) error {
+func (fm FileManager) Add_File(src, dst string) error {
 
-	if in_path := fm.is_in_root_path(dst); !in_path{
+	if in_path := fm.is_in_root_path(dst); !in_path {
 		return errors.New("Destination is not in Flotilla Root Path")
 	}
 
 	err := fm.cp(src, dst)
 
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (fm *File_Manager) Move_File(src, dst string) (err error) {
+func (fm *FileManager) Move_File(src, dst string) (err error) {
 	err = fm.Add_File(src, dst)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	err = fm.Delete_File(src)
 	return err
 }
 
-func (fm *File_Manager) Delete_File(path string) error {
+func (fm *FileManager) Delete_File(path string) error {
 
-	if in_path := fm.is_in_root_path(path); !in_path{
+	if in_path := fm.is_in_root_path(path); !in_path {
 		return errors.New("Cannot delete file that is not in Flotilla Root Path")
 	}
 	file, err := os.Stat(path)
-    if err != nil {
-        return err
-    }
-    if !file.Mode().IsRegular() {
-        // cannot copy non-regular files (e.g., directories,
-        // symlinks, devices, etc.)
-        return fmt.Errorf("CopyFile: non-regular source file %s (%q)", file.Name(), file.Mode().String())
-    }
+	if err != nil {
+		return err
+	}
+	if !file.Mode().IsRegular() {
+		// cannot copy non-regular files (e.g., directories,
+		// symlinks, devices, etc.)
+		return fmt.Errorf("CopyFile: non-regular source file %s (%q)", file.Name(), file.Mode().String())
+	}
 
-    // delete the file
-    os.Remove(path)
+	// delete the file
+	os.Remove(path)
 
 	return nil
 }
 
-
-
-func (fm File_Manager) is_in_root_path(path string) (in_path bool){
+func (fm FileManager) is_in_root_path(path string) (in_path bool) {
 	defer func() {
-        // recover from panic if one occured.
-        if recover() != nil {
-            in_path = false
-        }
-    }()
-    in_path = false
-	if path[:len(fm.Root_Folder_Path)] == fm.Root_Folder_Path{
+		// recover from panic if one occured.
+		if recover() != nil {
+			in_path = false
+		}
+	}()
+	in_path = false
+	if path[:len(fm.Root_Folder_Path)] == fm.Root_Folder_Path {
 		in_path = true
 	}
-	
+
 	return
 
 }
 
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
 // the same, then return success. Otherise copy the file contents from src to dst.
-func (fm File_Manager) cp(src, dst string) (err error){
+func (fm FileManager) cp(src, dst string) (err error) {
 	sfi, err := os.Stat(src)
-    if err != nil {
-        return
-    }
-    if !sfi.Mode().IsRegular() {
-        // cannot copy non-regular files (e.g., directories,
-        // symlinks, devices, etc.)
-        return fmt.Errorf("CopyFile: non-regular source file %s (%q)", sfi.Name(), sfi.Mode().String())
-    }
-    dfi, err := os.Stat(dst)
-    if err != nil {
-        if !os.IsNotExist(err) {
-            return
-        }
-    } else {
-        if !(dfi.Mode().IsRegular()) {
-            return fmt.Errorf("CopyFile: non-regular destination file %s (%q)", dfi.Name(), dfi.Mode().String())
-        }
-        if os.SameFile(sfi, dfi) {
-            return
-        }
-    }
-    err = fm.copyFileContents(src, dst)
-    return
+	if err != nil {
+		return
+	}
+	if !sfi.Mode().IsRegular() {
+		// cannot copy non-regular files (e.g., directories,
+		// symlinks, devices, etc.)
+		return fmt.Errorf("CopyFile: non-regular source file %s (%q)", sfi.Name(), sfi.Mode().String())
+	}
+	dfi, err := os.Stat(dst)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return
+		}
+	} else {
+		if !(dfi.Mode().IsRegular()) {
+			return fmt.Errorf("CopyFile: non-regular destination file %s (%q)", dfi.Name(), dfi.Mode().String())
+		}
+		if os.SameFile(sfi, dfi) {
+			return
+		}
+	}
+	err = fm.copyFileContents(src, dst)
+	return
 }
 
 // copyFileContents copies the contents of the file named src to the file named
 // by dst. The file will be created if it does not already exist. If the
 // destination file exists, all it's contents will be replaced by the contents
 // of the source file.
-func (fm File_Manager) copyFileContents(src, dst string) (err error) {
-    in, err := os.Open(src)
-    if err != nil {
-        return
-    }
-    defer in.Close()
-    out, err := os.Create(dst)
-    if err != nil {
-        return
-    }
-    defer func() {
-        cerr := out.Close()
-        if err == nil {
-            err = cerr
-        }
-    }()
-    if _, err = io.Copy(out, in); err != nil {
-        return
-    }
-    err = out.Sync()
-    return
+func (fm FileManager) copyFileContents(src, dst string) (err error) {
+	in, err := os.Open(src)
+	if err != nil {
+		return
+	}
+	defer in.Close()
+	out, err := os.Create(dst)
+	if err != nil {
+		return
+	}
+	defer func() {
+		cerr := out.Close()
+		if err == nil {
+			err = cerr
+		}
+	}()
+	if _, err = io.Copy(out, in); err != nil {
+		return
+	}
+	err = out.Sync()
+	return
 }

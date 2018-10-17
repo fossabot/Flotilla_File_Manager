@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 06:10:39
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-17 11:05:50
+* @Last Modified time: 2018-10-17 11:16:04
  */
 
 package NatsFile
@@ -44,6 +44,8 @@ func NewNatsFile() (fnats *NatsFile, err error) {
 }
 
 func (nf *NatsFile) createReqs() (err error) {
+	// Assign each to err. At the end if there are errors we will
+	// return the most recent error
 	_, err = nf.NC.Subscribe(FS.SELECT_FILE, nf.selectFile)
 	_, err = nf.NC.Subscribe(FS.GET_FILE_STRUCTURE, nf.getFileJSON)
 

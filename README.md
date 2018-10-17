@@ -1,3 +1,3 @@
 # Flotilla File Manager
 
-This repo will manage all print files and handle file streaming
+[![Go Report Card](https://goreportcard.com/badge/github.com/Ximidar/Flotilla_File_Manager)](https://goreportcard.com/report/github.com/Ximidar/Flotilla_File_Manager)
