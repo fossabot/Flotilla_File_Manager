@@ -2,50 +2,61 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 06:10:39
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-14 11:25:04
-*/
+* @Last Modified time: 2018-10-17 11:05:50
+ */
 
-package nats_file
+package NatsFile
 
-import(
+import (
 	"fmt"
+
 	"github.com/nats-io/go-nats"
-	FS "github.com/ximidar/Flotilla/data_structures/file_structures"
 	FM "github.com/ximidar/Flotilla/Flotilla_File_Manager/File_Manager"
+	FS "github.com/ximidar/Flotilla/data_structures/file_structures"
 )
 
-type Nats_File struct{
+// NatsFile is a Struct for the Nats interface to
+// The Flotilla File System
+type NatsFile struct {
 	NC *nats.Conn
 
-	File_Manager *FM.File_Manager
-
+	FileManager *FM.File_Manager
 }
 
-func New_Nats_File() (*Nats_File, error){
-	fnats := new(Nats_File)
-	err := error(nil)
+// NewNatsFile Use this function to create a new NatsFile Object
+func NewNatsFile() (fnats *NatsFile, err error) {
+	fnats = new(NatsFile)
 	fnats.NC, err = nats.Connect(nats.DefaultURL)
 
 	if err != nil {
 		fmt.Printf("Can't connect: %v\n", err)
 		return nil, err
 	}
+	err = fnats.createReqs()
+	if err != nil {
+		return nil, err
+	}
 
 	// Create File manager
-	fnats.File_Manager = FM.New_File_Manager()
+	fnats.FileManager = FM.New_File_Manager()
 
 	return fnats, nil
 }
 
-func (nf *Nats_File) Create_Reqs() {
-	nf.NC.Subscribe(FS.SELECT_FILE, nf.select_file)
-	nf.NC.Subscribe(FS.GET_FILE_STRUCTURE, nf.get_file_json)
+func (nf *NatsFile) createReqs() (err error) {
+	_, err = nf.NC.Subscribe(FS.SELECT_FILE, nf.selectFile)
+	_, err = nf.NC.Subscribe(FS.GET_FILE_STRUCTURE, nf.getFileJSON)
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (nf *Nats_File) select_file(msg *nats.Msg){
+func (nf *NatsFile) selectFile(msg *nats.Msg) {
 
 }
 
-func (nf *Nats_File) get_file_json(msg *nats.Msg){
+func (nf *NatsFile) getFileJSON(msg *nats.Msg) {
 
 }
