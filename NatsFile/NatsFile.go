@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 06:10:39
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-17 11:16:04
+* @Last Modified time: 2018-10-17 11:43:17
  */
 
 package NatsFile
@@ -11,7 +11,7 @@ import (
 	"fmt"
 
 	"github.com/nats-io/go-nats"
-	FM "github.com/ximidar/Flotilla/Flotilla_File_Manager/File_Manager"
+	FM "github.com/ximidar/Flotilla/Flotilla_File_Manager/FileManager"
 	FS "github.com/ximidar/Flotilla/data_structures/file_structures"
 )
 
@@ -20,7 +20,7 @@ import (
 type NatsFile struct {
 	NC *nats.Conn
 
-	FileManager *FM.File_Manager
+	FileManager *FM.FileManager
 }
 
 // NewNatsFile Use this function to create a new NatsFile Object
@@ -38,7 +38,7 @@ func NewNatsFile() (fnats *NatsFile, err error) {
 	}
 
 	// Create File manager
-	fnats.FileManager = FM.New_File_Manager()
+	fnats.FileManager = FM.NewFileManager()
 
 	return fnats, nil
 }

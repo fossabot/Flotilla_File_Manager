@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 02:38:49
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-17 11:22:04
+* @Last Modified time: 2018-10-17 11:53:31
  */
 
 package FileManager
@@ -43,7 +43,7 @@ func NewFileManager() *FileManager {
 		panic(err)
 	}
 
-	fm.Init_Paths()
+	fm.InitPaths()
 	return fm
 }
 
@@ -72,7 +72,7 @@ func (fm *FileManager) HandleEvent(event fsnotify.Event) {
 
 	case fsnotify.Create:
 		fmt.Println("Create Event")
-		err := fm.Add_File_To_Structure(event.Name)
+		err := fm.AddFileToStructure(event.Name)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -91,17 +91,17 @@ func (fm *FileManager) HandleEvent(event fsnotify.Event) {
 
 	case fsnotify.Write:
 		fmt.Println("Write Event")
-		file, err := fm.Get_File_By_Path(event.Name)
+		file, err := fm.GetFileByPath(event.Name)
 		if err != nil {
 			fmt.Println(err)
 		}
-		file.Update_Info()
+		file.UpdateInfo()
 	}
 }
 
 // RemoveFileFromStructure Will remove a file object from the Structure Map
 func (fm *FileManager) RemoveFileFromStructure(path string) error {
-	file, err := fm.Get_File_By_Path(ospath.Dir(path))
+	file, err := fm.GetFileByPath(ospath.Dir(path))
 	basename := ospath.Base(path)
 	if err != nil {
 		return err
@@ -117,13 +117,14 @@ func (fm *FileManager) RemoveFileFromStructure(path string) error {
 	return nil
 }
 
-func (fm *FileManager) Add_File_To_Structure(path string) error {
-	file, err := fm.Get_File_By_Path(path)
+// AddFileToStructure will add a file to the structure that was not previously there
+func (fm *FileManager) AddFileToStructure(path string) error {
+	file, err := fm.GetFileByPath(path)
 	if err == nil {
 		return errors.New("File already exists")
 	}
 
-	file, err = fm.Get_File_By_Path(ospath.Dir(path))
+	file, err = fm.GetFileByPath(ospath.Dir(path))
 	if err != nil {
 		fmt.Printf("Could not get %v\n", ospath.Dir(path))
 		return err
@@ -141,60 +142,60 @@ func (fm *FileManager) Add_File_To_Structure(path string) error {
 	}
 
 	// tell the directory to re-index all it's files
-	file.Index_fs()
+	file.Indexfs()
 
 	return nil
 
 }
 
-// This function will be given a path and it will return the correct file
-func (fm FileManager) Get_File_By_Path(path string) (*Files.File, error) {
+// GetFileByPath This function will be given a path and it will return the correct file
+func (fm FileManager) GetFileByPath(path string) (*Files.File, error) {
 	// if the path is the root file, then get the root file
-	if path == fm.Root_Folder_Path {
+	if path == fm.RootFolderPath {
 		return fm.Structure["root"], nil
 	}
-	path_copy := path
+	pathCopy := path
 	// cut off everything before the root file
-	path_copy = strings.Replace(path_copy, fm.Root_Folder_Path+"/", "", 1)
+	pathCopy = strings.Replace(pathCopy, fm.RootFolderPath+"/", "", 1)
 
 	// split remaining names up by "/" char
-	path_keys := strings.Split(path_copy, "/")
-	fmt.Println(path_keys)
+	pathKeys := strings.Split(pathCopy, "/")
+	fmt.Println(pathKeys)
 
 	// pull file out of structure
 
-	pulled_file := new(Files.File)
+	pulledFile := new(Files.File)
 	structure := fm.Structure["root"].Contents
-	key_length := len(path_keys)
-	for index, value := range path_keys {
-		if index+1 == key_length {
+	keyLength := len(pathKeys)
+	for index, value := range pathKeys {
+		if index+1 == keyLength {
 			var ok bool
-			pulled_file, ok = structure[value]
+			pulledFile, ok = structure[value]
 			if !ok {
 				return nil, errors.New("File doesn't exist")
 			}
 			fmt.Println("Pulled File")
 		} else {
-			temp_structure, ok := structure[value]
+			tempStructure, ok := structure[value]
 			if !ok {
 				return nil, errors.New("File doesn't exist")
 			}
-			structure = temp_structure.Contents
+			structure = tempStructure.Contents
 		}
 	}
 
-	return pulled_file, nil
+	return pulledFile, nil
 }
 
-// This function will check that our Root Folder Path Exists and is created, then it will add fsnotify
+// InitPaths This function will check that our Root Folder Path Exists and is created, then it will add fsnotify
 // watchers to every path
-func (fm *FileManager) Init_Paths() {
+func (fm *FileManager) InitPaths() {
 
 	// Create root folder path
-	fm.create_root_folder_path()
+	fm.createRootFolderPath()
 
 	// Index FS
-	fm.index_fs()
+	fm.indexfs()
 
 	go fm.FSWatcher()
 
@@ -202,8 +203,8 @@ func (fm *FileManager) Init_Paths() {
 
 // walk the root directory and index filesystem while also adding directories to the
 // fs watcher
-func (fm *FileManager) index_fs() {
-	filepath.Walk(fm.Root_Folder_Path, func(path string, info os.FileInfo, err error) error {
+func (fm *FileManager) indexfs() {
+	filepath.Walk(fm.RootFolderPath, func(path string, info os.FileInfo, err error) error {
 
 		if err != nil {
 			fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
@@ -217,14 +218,15 @@ func (fm *FileManager) index_fs() {
 
 	})
 
-	root_structure := Files.New_File(fm.Root_Folder_Path, "folder")
-	root_structure.Index_fs()
-	fm.Structure["root"] = root_structure
-	fm.Print_Structure()
+	rootStructure := Files.NewFile(fm.RootFolderPath, "folder")
+	rootStructure.Indexfs()
+	fm.Structure["root"] = rootStructure
+	fm.PrintStructure()
 }
 
-func (fm FileManager) Print_Structure() {
-	marshed, err := fm.Get_JSON_Structure()
+// PrintStructure will dump the Structure object to the console
+func (fm FileManager) PrintStructure() {
+	marshed, err := fm.GetJSONStructure()
 	if err != nil {
 		fmt.Println("Couldn't get json structure:", err)
 		return
@@ -232,7 +234,8 @@ func (fm FileManager) Print_Structure() {
 	fmt.Println(string(marshed))
 }
 
-func (fm FileManager) Get_JSON_Structure() ([]byte, error) {
+// GetJSONStructure will create a JSON object of the Structure Object
+func (fm FileManager) GetJSONStructure() ([]byte, error) {
 	marshed, err := json.MarshalIndent(fm.Structure, "", "    ")
 	if err != nil {
 		fmt.Println(err)
@@ -241,13 +244,13 @@ func (fm FileManager) Get_JSON_Structure() ([]byte, error) {
 	return marshed, nil
 }
 
-func (fm *FileManager) create_root_folder_path() {
+func (fm *FileManager) createRootFolderPath() {
 	// Check and create basic data directory
 	home := os.Getenv("HOME")
-	fm.Root_Folder_Path = ospath.Clean(home + "/Flotilla_Data")
+	fm.RootFolderPath = ospath.Clean(home + "/Flotilla_Data")
 
-	if _, err := os.Stat(fm.Root_Folder_Path); os.IsNotExist(err) {
-		err := os.Mkdir(fm.Root_Folder_Path, 0755)
+	if _, err := os.Stat(fm.RootFolderPath); os.IsNotExist(err) {
+		err := os.Mkdir(fm.RootFolderPath, 0750)
 		if err != nil {
 			panic(err)
 		}
@@ -260,9 +263,10 @@ func (fm *FileManager) create_root_folder_path() {
 // fsnotify functions will take care of maintaining the correct structure  //
 /////////////////////////////////////////////////////////////////////////////
 
-func (fm FileManager) Add_File(src, dst string) error {
+// AddFile will copy a file from src to dst
+func (fm FileManager) AddFile(src, dst string) error {
 
-	if in_path := fm.is_in_root_path(dst); !in_path {
+	if inPath := fm.isInRootPath(dst); !inPath {
 		return errors.New("Destination is not in Flotilla Root Path")
 	}
 
@@ -275,18 +279,20 @@ func (fm FileManager) Add_File(src, dst string) error {
 	return nil
 }
 
-func (fm *FileManager) Move_File(src, dst string) (err error) {
-	err = fm.Add_File(src, dst)
+// MoveFile will move a file from src to dst
+func (fm *FileManager) MoveFile(src, dst string) (err error) {
+	err = fm.AddFile(src, dst)
 	if err != nil {
 		return err
 	}
-	err = fm.Delete_File(src)
+	err = fm.DeleteFile(src)
 	return err
 }
 
-func (fm *FileManager) Delete_File(path string) error {
+// DeleteFile will delete a file at path
+func (fm *FileManager) DeleteFile(path string) error {
 
-	if in_path := fm.is_in_root_path(path); !in_path {
+	if inPath := fm.isInRootPath(path); !inPath {
 		return errors.New("Cannot delete file that is not in Flotilla Root Path")
 	}
 	file, err := os.Stat(path)
@@ -305,16 +311,16 @@ func (fm *FileManager) Delete_File(path string) error {
 	return nil
 }
 
-func (fm FileManager) is_in_root_path(path string) (in_path bool) {
+func (fm FileManager) isInRootPath(path string) (inPath bool) {
 	defer func() {
 		// recover from panic if one occured.
 		if recover() != nil {
-			in_path = false
+			inPath = false
 		}
 	}()
-	in_path = false
-	if path[:len(fm.Root_Folder_Path)] == fm.Root_Folder_Path {
-		in_path = true
+	inPath = false
+	if path[:len(fm.RootFolderPath)] == fm.RootFolderPath {
+		inPath = true
 	}
 
 	return

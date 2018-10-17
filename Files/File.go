@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-02 16:48:31
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-14 11:19:12
+* @Last Modified time: 2018-10-17 11:42:58
  */
 
 package Files
@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+// File is a representation of a file or folder on the system
 type File struct {
 	Name     string           `json:"name"`
 	Path     string           `json:"path"`
@@ -24,7 +25,8 @@ type File struct {
 	Contents map[string]*File `json:"contents,omitempty"`
 }
 
-func New_File(path string, filetype string) *File {
+// NewFile is a constructor for File
+func NewFile(path string, filetype string) *File {
 	file := new(File)
 
 	file.Path = path
@@ -34,17 +36,19 @@ func New_File(path string, filetype string) *File {
 	return file
 }
 
-func (file *File) Update_Info() {
+// UpdateInfo will be called to update the meta data for the file
+func (file *File) UpdateInfo() {
 	stats, err := os.Stat(file.Path)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	file.populate_file_info(stats)
+	file.populateFileInfo(stats)
 }
 
-func (file *File) Index_fs() {
+// Indexfs will index all subdirectories if the file is a folder
+func (file *File) Indexfs() {
 
 	path, err := os.Open(file.Path)
 
@@ -64,16 +68,16 @@ func (file *File) Index_fs() {
 
 	for _, fileinfo := range files {
 		if fileinfo.IsDir() {
-			file_path := ospath.Clean(file.Path + "/" + fileinfo.Name())
-			dir := New_File(file_path, "folder")
-			dir.populate_file_info(fileinfo)
+			filePath := ospath.Clean(file.Path + "/" + fileinfo.Name())
+			dir := NewFile(filePath, "folder")
+			dir.populateFileInfo(fileinfo)
 			// This should be the first time we enter a path into the structure so there should be no clashes
 			file.Contents[dir.Name] = dir
-			go dir.Index_fs()
+			go dir.Indexfs()
 		} else {
-			file_path := ospath.Clean(file.Path + "/" + fileinfo.Name())
-			pfile := New_File(file_path, "file")
-			pfile.populate_file_info(fileinfo)
+			filePath := ospath.Clean(file.Path + "/" + fileinfo.Name())
+			pfile := NewFile(filePath, "file")
+			pfile.populateFileInfo(fileinfo)
 			file.Contents[pfile.Name] = pfile
 		}
 
@@ -81,7 +85,7 @@ func (file *File) Index_fs() {
 
 }
 
-func (file *File) populate_file_info(info os.FileInfo) {
+func (file *File) populateFileInfo(info os.FileInfo) {
 	file.Name = info.Name()
 	file.Size = info.Size()
 	file.IsDir = info.IsDir()
