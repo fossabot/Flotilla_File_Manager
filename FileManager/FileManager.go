@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 02:38:49
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-17 11:53:31
+* @Last Modified time: 2018-10-17 11:55:52
  */
 
 package FileManager
@@ -313,7 +313,7 @@ func (fm *FileManager) DeleteFile(path string) error {
 
 func (fm FileManager) isInRootPath(path string) (inPath bool) {
 	defer func() {
-		// recover from panic if one occured.
+		// recover from panic if one occurred.
 		if recover() != nil {
 			inPath = false
 		}
