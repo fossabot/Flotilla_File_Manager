@@ -2,14 +2,16 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 06:10:39
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-18 15:05:14
+* @Last Modified time: 2018-10-18 16:00:16
  */
 
 package NatsFile
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/nats-io/go-nats"
 	DS "github.com/ximidar/Flotilla/DataStructures"
@@ -34,7 +36,11 @@ func NewNatsFile() (fnats *NatsFile, err error) {
 
 	if err != nil {
 		fmt.Printf("Can't connect: %v\n", err)
-		return nil, err
+		if connErr := fnats.HandleConnectionErrors(err); connErr != nil {
+			return nil, err
+		}
+		// we are skipping the err here because the previous function proved there were no connection problems
+		fnats.NC, _ = nats.Connect(nats.DefaultURL)
 	}
 	err = fnats.createReqs()
 	if err != nil {
@@ -50,6 +56,36 @@ func NewNatsFile() (fnats *NatsFile, err error) {
 	}
 
 	return fnats, nil
+}
+
+// HandleConnectionErrors will see if it can handle connection errors pertaining to Nats systems
+func (nf *NatsFile) HandleConnectionErrors(err error) error {
+
+	switch err {
+	case nats.ErrNoServers, nats.ErrTimeout:
+		return nf.tryConnection()
+	default:
+		return fmt.Errorf("Could not recover from Err: %v", err.Error())
+	}
+}
+
+// tryConnection will attempt to connect 5 times over 30 seconds. If it cannot connect, then it will error out
+func (nf *NatsFile) tryConnection() error {
+	for i := 0; i < 5; i++ {
+		fmt.Printf("Attempt %v to connect\n", i)
+
+		_, err := nats.Connect(nats.DefaultURL)
+		if err != nil {
+			fmt.Printf("Failed to Connect to %s\n", nats.DefaultURL)
+			// Sleep between tries
+			duration := 6 * time.Second
+			time.Sleep(duration)
+		} else {
+			return nil
+		}
+
+	}
+	return errors.New("Failed to Connect after 30 Seconds")
 }
 
 func (nf *NatsFile) createReqs() (err error) {
