@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 06:10:39
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-18 16:00:16
+* @Last Modified time: 2018-10-22 17:48:17
  */
 
 package NatsFile
@@ -48,7 +48,7 @@ func NewNatsFile() (fnats *NatsFile, err error) {
 	}
 
 	// Create File manager
-	fnats.FileManager = FM.NewFileManager()
+	fnats.FileManager, err = FM.NewFileManager()
 	fnats.FileStreamer, err = FileStreamer.NewFileStreamer()
 
 	if err != nil {

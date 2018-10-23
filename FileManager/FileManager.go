@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 02:38:49
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-17 11:55:52
+* @Last Modified time: 2018-10-22 17:41:22
  */
 
 package FileManager
@@ -30,7 +30,7 @@ type FileManager struct {
 }
 
 // NewFileManager will contstruct a FileManager Object
-func NewFileManager() *FileManager {
+func NewFileManager() (*FileManager, error) {
 	fm := new(FileManager)
 	fm.Structure = make(map[string]*Files.File)
 
@@ -40,11 +40,11 @@ func NewFileManager() *FileManager {
 
 	if err != nil {
 		fmt.Printf("Err: %v\n", err)
-		panic(err)
+		return nil, err
 	}
 
 	fm.InitPaths()
-	return fm
+	return fm, nil
 }
 
 // FSWatcher will watch for events and handle them as they come in
