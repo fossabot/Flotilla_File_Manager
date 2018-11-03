@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-17 17:14:20
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-23 00:03:48
+* @Last Modified time: 2018-10-31 00:02:57
  */
 
 package FileStreamer
@@ -10,6 +10,7 @@ package FileStreamer
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 
@@ -17,13 +18,13 @@ import (
 )
 
 // Adapter is an interface for other classes to be read files
-// AKA This will read files to the nats interface
+// AKA This will read files to the NATS interface
 type Adapter interface {
 	LineReader(line string)
 	ProgressUpdate(file *Files.File, currentLine int, readBytes int)
 }
 
-// FileStreamer Takes a file and streams it to the Nats Comm Object
+// FileStreamer Takes a file and streams it to the NATS Comm Object
 type FileStreamer struct {
 	SelectedFile *Files.File
 	Playing      bool
@@ -39,6 +40,10 @@ type FileStreamer struct {
 func NewFileStreamer(adapter Adapter) (*FileStreamer, error) {
 	fs := new(FileStreamer)
 	fs.Adapter = adapter
+
+	// Setup Channels
+	fs.playingChannel = make(chan bool, 10)
+
 	return fs, nil
 }
 
@@ -63,14 +68,15 @@ func (fs *FileStreamer) SetPlaying(set bool) {
 // File Streamer //
 ///////////////////
 
-// StreamFile will "Play" the selected file to the nats interface
+// StreamFile will "Play" the selected file to the NATS interface
 func (fs *FileStreamer) StreamFile() error {
 
+	fmt.Println("Checking if file can be played")
 	// Check if the selected file is there
 	if !fs.checkSelectedFile() {
 		return errors.New("current file cannot be played")
 	}
-
+	fmt.Println("Opening File")
 	// open file
 	file, err := fs.openSelectedFile()
 	if err != nil {
@@ -85,6 +91,7 @@ func (fs *FileStreamer) StreamFile() error {
 	}
 
 	// Play the file
+	fmt.Println("Playing file")
 	for !fs.DonePlaying {
 
 		if fs.Playing {
@@ -116,7 +123,7 @@ func (fs *FileStreamer) checkSelectedFile() bool {
 		return false
 	}
 
-	if _, err := os.Stat(fs.SelectedFile.Path); !os.IsNotExist(err) {
+	if _, err := os.Stat(fs.SelectedFile.Path); os.IsNotExist(err) {
 		return false
 	}
 

@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 06:10:39
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-22 17:48:17
+* @Last Modified time: 2018-11-02 18:34:15
  */
 
 package NatsFile
@@ -18,6 +18,7 @@ import (
 	FS "github.com/ximidar/Flotilla/DataStructures/FileStructures"
 	FM "github.com/ximidar/Flotilla/Flotilla_File_Manager/FileManager"
 	"github.com/ximidar/Flotilla/Flotilla_File_Manager/FileStreamer"
+	"github.com/ximidar/Flotilla/Flotilla_File_Manager/Files"
 )
 
 // NatsFile is a Struct for the Nats interface to
@@ -49,7 +50,7 @@ func NewNatsFile() (fnats *NatsFile, err error) {
 
 	// Create File manager
 	fnats.FileManager, err = FM.NewFileManager()
-	fnats.FileStreamer, err = FileStreamer.NewFileStreamer()
+	fnats.FileStreamer, err = FileStreamer.NewFileStreamer(fnats)
 
 	if err != nil {
 		return nil, err
@@ -155,4 +156,17 @@ func (nf *NatsFile) getStructureJSON(msg *nats.Msg) {
 
 	mReply, _ := json.Marshal(reply)
 	nf.NC.Publish(msg.Reply, mReply)
+}
+
+// LineReader is part of the adapter to send to the file streamer
+func (nf *NatsFile) LineReader(line string) {
+	fmt.Println(line)
+
+}
+
+// ProgressUpdate is part of the adapter to send to the File Streamer
+func (nf *NatsFile) ProgressUpdate(file *Files.File, currentLine int, readBytes int) {
+	fmt.Printf("File: %v\nCurrent Line: %v\nReadBytes: %v\n", file.Name, currentLine, readBytes)
+	progress := float64(readBytes) / float64(file.Size) * 100
+	fmt.Println("Progress: ", progress)
 }
