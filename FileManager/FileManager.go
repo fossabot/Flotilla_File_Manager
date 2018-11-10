@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 02:38:49
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-11-10 14:35:48
+* @Last Modified time: 2018-11-10 14:47:21
  */
 
 package FileManager
@@ -103,7 +103,10 @@ func (fm *FileManager) HandleEvent(event fsnotify.Event) {
 		if err != nil {
 			fmt.Println(err)
 		}
-		file.UpdateInfo()
+		if _, err := os.Stat(event.Name); !os.IsNotExist(err) {
+			file.UpdateInfo()
+		}
+
 	}
 }
 
