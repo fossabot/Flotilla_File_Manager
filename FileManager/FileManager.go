@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 02:38:49
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-22 17:41:22
+* @Last Modified time: 2018-11-10 14:35:48
  */
 
 package FileManager
@@ -27,6 +27,8 @@ type FileManager struct {
 	RootFolderPath string
 	Structure      map[string]*Files.File
 	Watcher        *fsnotify.Watcher
+
+	lastOp fsnotify.Op
 }
 
 // NewFileManager will contstruct a FileManager Object
@@ -62,35 +64,41 @@ func (fm *FileManager) FSWatcher() {
 	}
 }
 
+// PrintEventDetails will take an event and print the event details about it. If the last op is the same it will just print a dot
+func (fm *FileManager) PrintEventDetails(event fsnotify.Event) {
+	if event.Op != fm.lastOp {
+		fmt.Printf("%v Event at %s\n", event.Op, event.Name)
+	}
+
+	fm.lastOp = event.Op
+
+}
+
 // HandleEvent will handle a File system Event
 func (fm *FileManager) HandleEvent(event fsnotify.Event) {
-	fmt.Printf("Event at %s\n", event.Name)
+	fm.PrintEventDetails(event)
 
 	op := event.Op
-	fmt.Printf("Event Op: %v\n", op)
+
 	switch op {
 
 	case fsnotify.Create:
-		fmt.Println("Create Event")
 		err := fm.AddFileToStructure(event.Name)
 		if err != nil {
 			fmt.Println(err)
 		}
 	case fsnotify.Remove:
-		fmt.Println("Remove Event")
 		err := fm.RemoveFileFromStructure(event.Name)
 		if err != nil {
 			fmt.Println(err)
 		}
 	case fsnotify.Rename:
-		fmt.Println("Rename Event")
 		err := fm.RemoveFileFromStructure(event.Name)
 		if err != nil {
 			fmt.Println(err)
 		}
 
 	case fsnotify.Write:
-		fmt.Println("Write Event")
 		file, err := fm.GetFileByPath(event.Name)
 		if err != nil {
 			fmt.Println(err)
@@ -150,6 +158,12 @@ func (fm *FileManager) AddFileToStructure(path string) error {
 
 // GetFileByPath This function will be given a path and it will return the correct file
 func (fm FileManager) GetFileByPath(path string) (*Files.File, error) {
+
+	// if it is not in the root path then it is a relative path
+	if inPath := fm.isInRootPath(path); !inPath {
+		path = fm.makeRelativePath(path)
+	}
+
 	// if the path is the root file, then get the root file
 	if path == fm.RootFolderPath {
 		return fm.Structure["root"], nil
@@ -160,7 +174,6 @@ func (fm FileManager) GetFileByPath(path string) (*Files.File, error) {
 
 	// split remaining names up by "/" char
 	pathKeys := strings.Split(pathCopy, "/")
-	fmt.Println(pathKeys)
 
 	// pull file out of structure
 
@@ -174,7 +187,6 @@ func (fm FileManager) GetFileByPath(path string) (*Files.File, error) {
 			if !ok {
 				return nil, errors.New("File doesn't exist")
 			}
-			fmt.Println("Pulled File")
 		} else {
 			tempStructure, ok := structure[value]
 			if !ok {
@@ -267,9 +279,13 @@ func (fm *FileManager) createRootFolderPath() {
 func (fm FileManager) AddFile(src, dst string) error {
 
 	if inPath := fm.isInRootPath(dst); !inPath {
-		return errors.New("Destination is not in Flotilla Root Path")
+		var err error
+		dst, err = fm.solveRelativePath(dst)
+		if err != nil {
+			return err
+		}
 	}
-
+	fmt.Printf("Copying %v to %v\n", src, dst)
 	err := fm.cp(src, dst)
 
 	if err != nil {
@@ -325,6 +341,28 @@ func (fm FileManager) isInRootPath(path string) (inPath bool) {
 
 	return
 
+}
+
+// solveRelativePath will be given a path and it will rectify the path to put it in the root folder
+// For example if someone puts the destination as "/com/boom/" it will grab the root path and then create the
+// folders in order to satisfy the relative path
+func (fm *FileManager) solveRelativePath(path string) (string, error) {
+	rectifiedPath := filepath.Clean(fm.RootFolderPath + "/" + path)
+	dirPath := filepath.Dir(rectifiedPath)
+
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		fileerr := os.MkdirAll(dirPath, 0750)
+		if fileerr != nil {
+			return "", fileerr
+		}
+	}
+	return rectifiedPath, nil
+}
+
+// makeRelativePath will make a path relative without making folders
+func (fm *FileManager) makeRelativePath(path string) string {
+	rectifiedPath := filepath.Clean(fm.RootFolderPath + "/" + path)
+	return rectifiedPath
 }
 
 // CopyFile copies a file from src to dst. If src and dst files exist, and are

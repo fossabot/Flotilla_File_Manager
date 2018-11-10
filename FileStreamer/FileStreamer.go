@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-17 17:14:20
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-31 00:02:57
+* @Last Modified time: 2018-11-02 20:39:07
  */
 
 package FileStreamer
@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/ximidar/Flotilla/Flotilla_File_Manager/Files"
 )
@@ -32,8 +33,9 @@ type FileStreamer struct {
 	LineNumber   int
 	Adapter      Adapter
 
-	currentBytes   int
-	playingChannel chan bool
+	currentBytes      int
+	playingChannel    chan bool
+	continueStreaming chan bool
 }
 
 // NewFileStreamer will construct a FileStreamer object
@@ -43,6 +45,7 @@ func NewFileStreamer(adapter Adapter) (*FileStreamer, error) {
 
 	// Setup Channels
 	fs.playingChannel = make(chan bool, 10)
+	fs.continueStreaming = make(chan bool)
 
 	return fs, nil
 }
@@ -62,6 +65,17 @@ func (fs *FileStreamer) SetPlaying(set bool) {
 	}
 
 	// TODO Publish to NATS server if we are playing
+}
+
+// MonitorFeedback will watch for ok or wait and only continue to the next line when it's okay to do so
+func (fs *FileStreamer) MonitorFeedback(line string) {
+	monitorFor := []string{"ok", "wait"}
+	for _, key := range monitorFor {
+		if strings.Contains(line, key) {
+			fmt.Println("Continuing!")
+			fs.continueStreaming <- true
+		}
+	}
 }
 
 ///////////////////
@@ -103,8 +117,10 @@ func (fs *FileStreamer) StreamFile() error {
 				}
 				return lineErr
 			}
-			fs.readLine(line)
-			fs.Adapter.ProgressUpdate(fs.SelectedFile, fs.LineNumber, fs.currentBytes)
+
+			// Check line to update progress and send the line to the buffer
+			fs.checkLine(line)
+
 		} else {
 			// Wait for Playing to be true again
 			select {
@@ -116,6 +132,28 @@ func (fs *FileStreamer) StreamFile() error {
 	}
 
 	return nil
+}
+
+// checkLine will filter out any comments not to be sent
+func (fs *FileStreamer) checkLine(line string) {
+	// Update the progress
+	fs.updateProgress(line)
+
+	// Check if the line is a comment
+	trimline := strings.Replace(line, " ", "", -1)
+	if trimline[:1] == ";" {
+		return
+	}
+
+	// Read the line
+	go fs.readLine(line)
+
+	// After Reading a line wait for the buffer to ask for another
+	select {
+	case <-fs.continueStreaming:
+		return
+		// TODO add cases for pausing and playing and canceling and such
+	}
 }
 
 func (fs *FileStreamer) checkSelectedFile() bool {
@@ -138,9 +176,14 @@ func (fs *FileStreamer) openSelectedFile() (*os.File, error) {
 	return f, nil
 }
 
-// this function will read the line to the adapter
+// this function will read the line to the adapter. This is also where we should modify the line for "printing mode" ie G1 X10 turns into n350 G1 X10!9
 func (fs *FileStreamer) readLine(line string) {
-	fs.currentBytes += len(line)
 	fs.Adapter.LineReader(line)
+}
+
+// updateProgress will update the progression through the file
+func (fs *FileStreamer) updateProgress(line string) {
+	fs.currentBytes += len(line)
 	fs.LineNumber++
+	fs.Adapter.ProgressUpdate(fs.SelectedFile, fs.LineNumber, fs.currentBytes)
 }
