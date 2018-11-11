@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-02 16:48:31
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-17 11:42:58
+* @Last Modified time: 2018-11-11 11:59:31
  */
 
 package Files
@@ -38,6 +38,14 @@ func NewFile(path string, filetype string) *File {
 
 // UpdateInfo will be called to update the meta data for the file
 func (file *File) UpdateInfo() {
+
+	// sometimes file gets dereferenced before we can update it. Recover from calling a null pointer
+	defer func() {
+		if recover() != nil {
+			fmt.Println("UpdateInfo Failed")
+			return
+		}
+	}()
 	stats, err := os.Stat(file.Path)
 	if err != nil {
 		fmt.Println(err)

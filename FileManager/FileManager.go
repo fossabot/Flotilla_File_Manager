@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 02:38:49
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-11-10 14:47:21
+* @Last Modified time: 2018-11-11 11:45:54
  */
 
 package FileManager
@@ -160,7 +160,14 @@ func (fm *FileManager) AddFileToStructure(path string) error {
 }
 
 // GetFileByPath This function will be given a path and it will return the correct file
-func (fm FileManager) GetFileByPath(path string) (*Files.File, error) {
+func (fm FileManager) GetFileByPath(path string) (file *Files.File, err error) {
+
+	defer func() {
+		if recover() != nil {
+			file = nil
+			err = errors.New("File doesn't exist")
+		}
+	}()
 
 	// if it is not in the root path then it is a relative path
 	if inPath := fm.isInRootPath(path); !inPath {
@@ -300,6 +307,16 @@ func (fm FileManager) AddFile(src, dst string) error {
 
 // MoveFile will move a file from src to dst
 func (fm *FileManager) MoveFile(src, dst string) (err error) {
+
+	// detect relative paths for src and dst
+	if inPath := fm.isInRootPath(src); !inPath {
+		src = fm.makeRelativePath(src)
+	}
+	if inPath := fm.isInRootPath(dst); !inPath {
+		dst = fm.makeRelativePath(dst)
+	}
+
+	// move the file
 	err = fm.AddFile(src, dst)
 	if err != nil {
 		return err
@@ -308,24 +325,26 @@ func (fm *FileManager) MoveFile(src, dst string) (err error) {
 	return err
 }
 
-// DeleteFile will delete a file at path
+// DeleteFile will delete a file at path or relative path
 func (fm *FileManager) DeleteFile(path string) error {
 
+	// modify path if it is relative
 	if inPath := fm.isInRootPath(path); !inPath {
-		return errors.New("Cannot delete file that is not in Flotilla Root Path")
+		path = fm.makeRelativePath(path)
 	}
 	file, err := os.Stat(path)
 	if err != nil {
 		return err
 	}
 	if !file.Mode().IsRegular() {
-		// cannot copy non-regular files (e.g., directories,
-		// symlinks, devices, etc.)
-		return fmt.Errorf("CopyFile: non-regular source file %s (%q)", file.Name(), file.Mode().String())
+		return fmt.Errorf("non-regular file %s (%q)", file.Name(), file.Mode().String())
 	}
 
 	// delete the file
-	os.Remove(path)
+	err = os.Remove(path)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -337,11 +356,24 @@ func (fm FileManager) isInRootPath(path string) (inPath bool) {
 			inPath = false
 		}
 	}()
+	// Check one is to just compare paths
 	inPath = false
 	if path[:len(fm.RootFolderPath)] == fm.RootFolderPath {
 		inPath = true
+		return
 	}
 
+	// Check two is to grab the file info for the path and check it against the fileinfo for the root path
+	f1, err := os.Stat(path[:len(fm.RootFolderPath)])
+	// Don't check this error because we know RootFolderPath Exists and will stat just fine
+	f2, _ := os.Stat(fm.RootFolderPath)
+
+	if err != nil {
+		inPath = false
+		return
+	}
+
+	inPath = os.SameFile(f1, f2)
 	return
 
 }
