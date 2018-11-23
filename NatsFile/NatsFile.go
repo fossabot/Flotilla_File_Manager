@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 06:10:39
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-11-02 18:34:15
+* @Last Modified time: 2018-11-22 21:12:08
  */
 
 package NatsFile
@@ -15,14 +15,14 @@ import (
 
 	"github.com/nats-io/go-nats"
 	DS "github.com/ximidar/Flotilla/DataStructures"
+	CS "github.com/ximidar/Flotilla/DataStructures/CommStructures"
 	FS "github.com/ximidar/Flotilla/DataStructures/FileStructures"
 	FM "github.com/ximidar/Flotilla/Flotilla_File_Manager/FileManager"
 	"github.com/ximidar/Flotilla/Flotilla_File_Manager/FileStreamer"
 	"github.com/ximidar/Flotilla/Flotilla_File_Manager/Files"
 )
 
-// NatsFile is a Struct for the Nats interface to
-// The Flotilla File System
+// NatsFile will broadcast file system services to the NATS server.
 type NatsFile struct {
 	NC *nats.Conn
 
@@ -30,7 +30,7 @@ type NatsFile struct {
 	FileStreamer *FileStreamer.FileStreamer
 }
 
-// NewNatsFile Use this function to create a new NatsFile Object
+// NewNatsFile Use this function to create a new NatsFile Object.
 func NewNatsFile() (fnats *NatsFile, err error) {
 	fnats = new(NatsFile)
 	fnats.NC, err = nats.Connect(nats.DefaultURL)
@@ -55,6 +55,9 @@ func NewNatsFile() (fnats *NatsFile, err error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// subscribe to NATS Subjects
+	fnats.SubscribeSubjects()
 
 	return fnats, nil
 }
@@ -115,7 +118,7 @@ func (nf *NatsFile) selectFile(msg *nats.Msg) {
 	if err != nil {
 		// If we get an error, return an error
 		reply := nf.createNegativeResponse(err.Error())
-		nf.NC.Publish(msg.Reply, reply)
+		nf.SafePublish(msg.Reply, reply)
 		return
 	}
 
@@ -123,18 +126,23 @@ func (nf *NatsFile) selectFile(msg *nats.Msg) {
 	if err != nil {
 		// If we get an error, return an error
 		reply := nf.createNegativeResponse(err.Error())
-		nf.NC.Publish(msg.Reply, reply)
+		nf.SafePublish(msg.Reply, reply)
 		return
 	}
 
-	nf.FileStreamer.SelectFile(file)
+	err = nf.FileStreamer.SelectFile(file)
+	if err != nil {
+		reply := nf.createNegativeResponse(err.Error())
+		nf.SafePublish(msg.Reply, reply)
+		return
+	}
 
 	// Return the selected file if we are successful
 	reply := new(DS.ReplyJSON)
 	reply.Success = true
 	reply.Message, _ = json.Marshal(file)
 	mReply, _ := json.Marshal(reply)
-	nf.NC.Publish(msg.Reply, mReply)
+	nf.SafePublish(msg.Reply, mReply)
 
 	return
 
@@ -155,18 +163,47 @@ func (nf *NatsFile) getStructureJSON(msg *nats.Msg) {
 	reply.Message = jsonStructure
 
 	mReply, _ := json.Marshal(reply)
-	nf.NC.Publish(msg.Reply, mReply)
+	nf.SafePublish(msg.Reply, mReply)
+}
+
+// SafePublish will check for any errors that can happen while publishing
+// to NATS
+func (nf *NatsFile) SafePublish(subject string, pubData []byte) {
+	err := nf.NC.Publish(subject, pubData)
+	if err != nil {
+		//TODO Handle errors
+		fmt.Println("\n\n", err)
+	}
 }
 
 // LineReader is part of the adapter to send to the file streamer
 func (nf *NatsFile) LineReader(line string) {
-	fmt.Println(line)
+	nf.SafePublish(CS.WriteLine, []byte(line))
 
 }
 
 // ProgressUpdate is part of the adapter to send to the File Streamer
-func (nf *NatsFile) ProgressUpdate(file *Files.File, currentLine int, readBytes int) {
-	fmt.Printf("File: %v\nCurrent Line: %v\nReadBytes: %v\n", file.Name, currentLine, readBytes)
+func (nf *NatsFile) ProgressUpdate(file *Files.File, currentLine int64, readBytes int64) {
 	progress := float64(readBytes) / float64(file.Size) * 100
-	fmt.Println("Progress: ", progress)
+	fsp := FS.FSProgress{File: file, CurrentLine: currentLine, ReadBytes: readBytes, Progress: progress}
+
+	mFSP, err := json.Marshal(fsp)
+	if err != nil {
+		fmt.Println("ERROR!", err)
+		return
+	}
+
+	nf.SafePublish(FS.FileProgress, mFSP)
+}
+
+// SubscribeSubjects will subscribe NatsFile to different NATS Subjects
+func (nf *NatsFile) SubscribeSubjects() error {
+
+	_, err := nf.NC.Subscribe(CS.ReadLine, nf.ReceiveComm)
+	return err
+}
+
+// ReceiveComm will receive lines from the Comm Topic on NATS and then forward the message to listeners. Currently that is only FileStreamer
+func (nf *NatsFile) ReceiveComm(msg *nats.Msg) {
+	nf.FileStreamer.MonitorFeedback(string(msg.Data))
 }

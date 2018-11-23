@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-17 17:14:20
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-11-02 20:39:07
+* @Last Modified time: 2018-11-22 21:00:21
  */
 
 package FileStreamer
@@ -22,7 +22,7 @@ import (
 // AKA This will read files to the NATS interface
 type Adapter interface {
 	LineReader(line string)
-	ProgressUpdate(file *Files.File, currentLine int, readBytes int)
+	ProgressUpdate(file *Files.File, currentLine int64, readBytes int64)
 }
 
 // FileStreamer Takes a file and streams it to the NATS Comm Object
@@ -30,10 +30,10 @@ type FileStreamer struct {
 	SelectedFile *Files.File
 	Playing      bool
 	DonePlaying  bool
-	LineNumber   int
+	LineNumber   int64
 	Adapter      Adapter
 
-	currentBytes      int
+	currentBytes      int64
 	playingChannel    chan bool
 	continueStreaming chan bool
 }
@@ -183,7 +183,7 @@ func (fs *FileStreamer) readLine(line string) {
 
 // updateProgress will update the progression through the file
 func (fs *FileStreamer) updateProgress(line string) {
-	fs.currentBytes += len(line)
+	fs.currentBytes += int64(len(line))
 	fs.LineNumber++
 	fs.Adapter.ProgressUpdate(fs.SelectedFile, fs.LineNumber, fs.currentBytes)
 }
