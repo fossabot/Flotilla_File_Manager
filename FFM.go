@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-01 18:58:24
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-10-17 11:39:48
+* @Last Modified time: 2018-11-26 15:55:18
  */
 package main
 
@@ -24,10 +24,7 @@ func main() {
 
 // Run will keep the program alive
 func Run() {
-	for {
-		select {
-		default:
-			continue
-		}
-	}
+	exit := make(chan bool, 0)
+
+	<-exit
 }

@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 06:10:39
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-11-22 21:12:08
+* @Last Modified time: 2018-11-26 15:25:30
  */
 
 package NatsFile
@@ -97,6 +97,9 @@ func (nf *NatsFile) createReqs() (err error) {
 	// return the most recent error
 	_, err = nf.NC.Subscribe(FS.SelectFile, nf.selectFile)
 	_, err = nf.NC.Subscribe(FS.GetFileStructure, nf.getStructureJSON)
+
+	//TODO Add in File modifiers.
+	// Add a function in FFM that will accept a http(s) url and get a file.
 
 	if err != nil {
 		return err
