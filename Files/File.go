@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-02 16:48:31
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-11-11 11:59:31
+* @Last Modified time: 2018-12-07 15:19:41
  */
 
 package Files
@@ -19,7 +19,7 @@ type File struct {
 	Name     string           `json:"name"`
 	Path     string           `json:"path"`
 	FileType string           `json:"filetype"`
-	Size     int64            `json:"size"`
+	Size     uint64           `json:"size"`
 	ModTime  time.Time        `json:"modtime"`
 	IsDir    bool             `json:"isdir"`
 	Contents map[string]*File `json:"contents,omitempty"`
@@ -95,7 +95,7 @@ func (file *File) Indexfs() {
 
 func (file *File) populateFileInfo(info os.FileInfo) {
 	file.Name = info.Name()
-	file.Size = info.Size()
+	file.Size = uint64(info.Size())
 	file.IsDir = info.IsDir()
 	file.ModTime = info.ModTime()
 
