@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 06:10:39
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-12-11 16:25:46
+* @Last Modified time: 2018-12-11 19:06:32
  */
 
 package NatsFile
@@ -17,6 +17,7 @@ import (
 	DS "github.com/ximidar/Flotilla/DataStructures"
 	CS "github.com/ximidar/Flotilla/DataStructures/CommStructures"
 	FS "github.com/ximidar/Flotilla/DataStructures/FileStructures"
+	"github.com/ximidar/Flotilla/Flotilla_CLI/FlotillaInterface"
 	FM "github.com/ximidar/Flotilla/Flotilla_File_Manager/FileManager"
 	"github.com/ximidar/Flotilla/Flotilla_File_Manager/FileStreamer"
 	"github.com/ximidar/Flotilla/Flotilla_File_Manager/Files"
@@ -28,6 +29,7 @@ type NatsFile struct {
 
 	FileManager  *FM.FileManager
 	FileStreamer *FileStreamer.FileStreamer
+	FI           *FlotillaInterface.FlotillaInterface
 }
 
 // NewNatsFile Use this function to create a new NatsFile Object.
@@ -44,6 +46,10 @@ func NewNatsFile() (fnats *NatsFile, err error) {
 		fnats.NC, _ = nats.Connect(nats.DefaultURL)
 	}
 	err = fnats.createReqs()
+	if err != nil {
+		return nil, err
+	}
+	fnats.FI, err = FlotillaInterface.NewFlotillaInterface()
 	if err != nil {
 		return nil, err
 	}
@@ -155,6 +161,8 @@ func (nf *NatsFile) selectFile(msg *nats.Msg) {
 func (nf *NatsFile) streamFile(msg *nats.Msg) {
 	if nf.FileStreamer.SelectedFile != nil && !nf.FileStreamer.Playing {
 		// stream file
+		nf.FileStreamer.SetPlaying(true)
+		nf.FileStreamer.DonePlaying = false
 		go nf.FileStreamer.StreamFile()
 
 		// reply that a stream has started
@@ -202,7 +210,11 @@ func (nf *NatsFile) SafePublish(subject string, pubData []byte) {
 
 // LineReader is part of the adapter to send to the file streamer
 func (nf *NatsFile) LineReader(line string) {
-	nf.SafePublish(CS.WriteLine, []byte(line))
+	//nf.SafePublish(CS.WriteLine, []byte(line))
+	err := nf.FI.CommWrite(line)
+	if err != nil {
+		fmt.Println("ERROR: ", err.Error())
+	}
 
 }
 

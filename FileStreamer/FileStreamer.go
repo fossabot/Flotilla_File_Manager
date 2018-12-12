@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-17 17:14:20
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-11-22 21:00:21
+* @Last Modified time: 2018-12-11 18:58:43
  */
 
 package FileStreamer
@@ -52,6 +52,7 @@ func NewFileStreamer(adapter Adapter) (*FileStreamer, error) {
 
 // SelectFile will select a file
 func (fs *FileStreamer) SelectFile(file *Files.File) error {
+	fmt.Printf("Selecting File: %v", file.Name)
 	fs.SelectedFile = file
 
 	return nil
@@ -88,9 +89,10 @@ func (fs *FileStreamer) StreamFile() error {
 	fmt.Println("Checking if file can be played")
 	// Check if the selected file is there
 	if !fs.checkSelectedFile() {
+		fmt.Println("Current File Cannot Be Played!")
 		return errors.New("current file cannot be played")
 	}
-	fmt.Println("Opening File")
+	fmt.Printf("Opening File %v\n", fs.SelectedFile.Name)
 	// open file
 	file, err := fs.openSelectedFile()
 	if err != nil {
@@ -105,7 +107,7 @@ func (fs *FileStreamer) StreamFile() error {
 	}
 
 	// Play the file
-	fmt.Println("Playing file")
+	fmt.Printf("Playing file: %v\n", fs.SelectedFile.Name)
 	for !fs.DonePlaying {
 
 		if fs.Playing {
