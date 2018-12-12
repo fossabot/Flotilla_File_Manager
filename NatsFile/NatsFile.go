@@ -2,7 +2,7 @@
 * @Author: Ximidar
 * @Date:   2018-10-10 06:10:39
 * @Last Modified by:   Ximidar
-* @Last Modified time: 2018-11-26 15:25:30
+* @Last Modified time: 2018-12-11 16:25:46
  */
 
 package NatsFile
@@ -97,6 +97,7 @@ func (nf *NatsFile) createReqs() (err error) {
 	// return the most recent error
 	_, err = nf.NC.Subscribe(FS.SelectFile, nf.selectFile)
 	_, err = nf.NC.Subscribe(FS.GetFileStructure, nf.getStructureJSON)
+	_, err = nf.NC.Subscribe(FS.StreamFile, nf.streamFile)
 
 	//TODO Add in File modifiers.
 	// Add a function in FFM that will accept a http(s) url and get a file.
@@ -148,6 +149,26 @@ func (nf *NatsFile) selectFile(msg *nats.Msg) {
 	nf.SafePublish(msg.Reply, mReply)
 
 	return
+
+}
+
+func (nf *NatsFile) streamFile(msg *nats.Msg) {
+	if nf.FileStreamer.SelectedFile != nil && !nf.FileStreamer.Playing {
+		// stream file
+		go nf.FileStreamer.StreamFile()
+
+		// reply that a stream has started
+		reply := new(DS.ReplyString)
+		reply.Message = "playing selected file"
+		reply.Success = true
+		mReply, _ := json.Marshal(reply)
+		nf.SafePublish(msg.Reply, mReply)
+
+		return
+	}
+
+	reply := nf.createNegativeResponse("no selected file or another file is already playing")
+	nf.SafePublish(msg.Reply, reply)
 
 }
 
